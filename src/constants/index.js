@@ -1,0 +1,17 @@
+export const FORM_LIMITS = {
+  CONTEST_NAME_MIN: 3,
+  CONTEST_NAME_MAX: 100,
+  PARTICIPANT_NAME_MIN: 2,
+  PARTICIPANT_NAME_MAX: 50,
+  AGE_MIN: 0,
+  AGE_MAX: 120,
+};
+
+export const TOAST = {
+  DURATION_MS: 3000,
+  MAX_VISIBLE: 5,
+};
+
+export const SORT = {
+  LOCALE: "id",
+};

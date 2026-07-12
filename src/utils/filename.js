@@ -1,7 +1,11 @@
 import { slugify } from "./slugify";
 
-export function generateExportFilename(contestName, category) {
+export function generateExportFilename(
+  contestName,
+  category,
+  extension = "png"
+) {
   const contestSlug = slugify(contestName) || "lomba";
   const categorySlug = slugify(category) || "kategori";
-  return `${contestSlug}-${categorySlug}.png`;
+  return `${contestSlug}-${categorySlug}.${extension}`;
 }

@@ -22,7 +22,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ["react", "react-dom", "react-router-dom"],
           forms: ["react-hook-form"],
-          export: ["html-to-image"],
+          export: ["html-to-image", "xlsx"],
         },
       },
     },

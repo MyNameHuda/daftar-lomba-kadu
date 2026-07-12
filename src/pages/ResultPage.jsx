@@ -1,8 +1,9 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft, FileSpreadsheet } from "lucide-react";
 import { useContest } from "@/context/ContestContext";
 import { useExportPNG } from "@/hooks/useExportPNG";
+import { useExportXLSX } from "@/hooks/useExportXLSX";
 import { useToast } from "@/hooks/useToast";
 import { generateExportFilename } from "@/utils/filename";
 import { ResultCard } from "@/components/contest/ResultCard";
@@ -15,15 +16,22 @@ export default function ResultPage() {
   const { state } = useContest();
   const navigate = useNavigate();
   const resultRef = useRef(null);
-  const { exportToPng, isExporting } = useExportPNG();
+  const { exportToPng, isExporting: isExportingPng } = useExportPNG();
+  const { exportToXlsx, isExporting: isExportingXlsx } = useExportXLSX();
   const toast = useToast();
 
-  const handleDownload = async () => {
+  const isBusy = isExportingPng || isExportingXlsx;
+
+  const handleDownloadPng = async () => {
     if (!resultRef.current) {
       toast.error("Element tidak ditemukan, coba refresh halaman");
       return;
     }
-    const filename = generateExportFilename(state.contestName, state.category);
+    const filename = generateExportFilename(
+      state.contestName,
+      state.category,
+      "png"
+    );
     const result = await exportToPng(resultRef.current, filename);
     if (result.ok) {
       toast.success(`Berhasil didownload: ${filename}`);
@@ -31,6 +39,27 @@ export default function ResultPage() {
       const message =
         result.error?.message || "Terjadi kesalahan tidak dikenal";
       toast.error(`Gagal export PNG: ${message.slice(0, 80)}`);
+    }
+  };
+
+  const handleDownloadXlsx = async () => {
+    const filename = generateExportFilename(
+      state.contestName,
+      state.category,
+      "xlsx"
+    );
+    const result = await exportToXlsx(
+      state.participants,
+      state.contestName,
+      state.category,
+      filename
+    );
+    if (result.ok) {
+      toast.success(`Berhasil didownload: ${filename}`);
+    } else {
+      const message =
+        result.error?.message || "Terjadi kesalahan tidak dikenal";
+      toast.error(`Gagal export XLSX: ${message.slice(0, 80)}`);
     }
   };
 
@@ -49,19 +78,32 @@ export default function ResultPage() {
       </Card>
 
       <div className="space-y-2">
-        <Button
-          fullWidth
-          size="lg"
-          onClick={handleDownload}
-          loading={isExporting}
-          icon={<Download className="h-4 w-4" />}
-        >
-          {isExporting ? "Memproses..." : "Download PNG"}
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Button
+            size="lg"
+            onClick={handleDownloadPng}
+            loading={isExportingPng}
+            disabled={isBusy && !isExportingPng}
+            icon={<Download className="h-4 w-4" />}
+          >
+            {isExportingPng ? "Memproses..." : "Download PNG"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={handleDownloadXlsx}
+            loading={isExportingXlsx}
+            disabled={isBusy && !isExportingXlsx}
+            icon={<FileSpreadsheet className="h-4 w-4" />}
+          >
+            {isExportingXlsx ? "Memproses..." : "Download XLSX"}
+          </Button>
+        </div>
+
         <Button
           fullWidth
           size="md"
-          variant="secondary"
+          variant="ghost"
           onClick={() => navigate(ROUTES.PARTICIPANTS)}
           icon={<ArrowLeft className="h-4 w-4" />}
         >
@@ -72,7 +114,11 @@ export default function ResultPage() {
       <p className="text-xs text-slate-400 text-center mt-4">
         File akan disimpan dengan nama{" "}
         <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
-          {generateExportFilename(state.contestName, state.category)}
+          {generateExportFilename(state.contestName, state.category, "png")}
+        </code>{" "}
+        atau{" "}
+        <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
+          {generateExportFilename(state.contestName, state.category, "xlsx")}
         </code>
       </p>
     </div>

@@ -1,12 +1,6 @@
-import {
-  Baby,
-  Smile,
-  GraduationCap,
-  Users,
-  Check,
-} from "lucide-react";
+import { Baby, Smile, Users, Check } from "lucide-react";
 
-const ICONS = { Baby, Smile, GraduationCap, Users };
+const ICONS = { Baby, Smile, Users };
 
 export function CategoryCard({ category, selected = false, onClick }) {
   const Icon = ICONS[category.iconName] ?? Users;

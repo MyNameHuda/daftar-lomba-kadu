@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import * as XLSX from "xlsx";
 import { formatDateID } from "@/utils/dateFormat";
 import { getCategoryById, getCategoryAgeLabel } from "@/constants/categories";
+import { getSubCategoryById } from "@/constants/subCategories";
 
 const HEADER_STYLE = { font: { bold: true }, fill: { fgColor: { rgb: "EEF2FF" } } };
 const TITLE_STYLE = { font: { bold: true, sz: 14 } };
@@ -19,7 +20,8 @@ export function useExportXLSX() {
   const [error, setError] = useState(null);
 
   const exportToXlsx = useCallback(
-    async (participants, contestName, category, filename) => {
+    async (state, filename) => {
+      const { participants, contestName, category, subCategory } = state;
       if (!participants || participants.length === 0) {
         const err = new Error("Tidak ada peserta untuk diekspor");
         setError(err);
@@ -31,11 +33,16 @@ export function useExportXLSX() {
 
       try {
         const meta = getCategoryById(category);
+        const subMeta = subCategory ? getSubCategoryById(subCategory) : null;
         const isIbuIbu = category === "ibu-ibu";
+
+        const categoryText = subMeta
+          ? `${meta?.label ?? "-"} — ${subMeta.label}`
+          : meta?.label ?? "-";
 
         const aoa = [
           [contestName ?? "Lomba"],
-          [`Kategori: ${meta?.label ?? "-"} (${getCategoryAgeLabel(category)})`],
+          [`Kategori: ${categoryText} (${getCategoryAgeLabel(category)})`],
           [`Tanggal Generate: ${formatDateID()}`],
           [],
           ["No", "Nama", isIbuIbu ? "Kategori Umur" : "Umur"],

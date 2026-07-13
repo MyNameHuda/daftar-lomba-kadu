@@ -7,6 +7,7 @@ import { ROUTES } from "@/constants/routes";
 
 const HomePage = lazy(() => import("@/pages/HomePage"));
 const CategoryPage = lazy(() => import("@/pages/CategoryPage"));
+const SubCategoryPage = lazy(() => import("@/pages/SubCategoryPage"));
 const ParticipantsPage = lazy(() => import("@/pages/ParticipantsPage"));
 const ResultPage = lazy(() => import("@/pages/ResultPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
@@ -45,11 +46,26 @@ export default function App() {
         />
 
         <Route
-          path={ROUTES.PARTICIPANTS}
+          path={ROUTES.SUB_CATEGORY}
           element={
             <>
               <RouteGuard
                 require={["contestName", "category"]}
+                redirectTo={ROUTES.HOME}
+              />
+              <Suspense fallback={<PageLoader />}>
+                <SubCategoryPage />
+              </Suspense>
+            </>
+          }
+        />
+
+        <Route
+          path={ROUTES.PARTICIPANTS}
+          element={
+            <>
+              <RouteGuard
+                require={["contestName", "category", "subCategory"]}
                 redirectTo={ROUTES.HOME}
               />
               <Suspense fallback={<PageLoader />}>

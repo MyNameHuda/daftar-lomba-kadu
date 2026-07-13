@@ -8,7 +8,6 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
   const { state } = useContest();
   const meta = getCategoryById(state.category);
   const isIbuIbu = state.category === "ibu-ibu";
-  const ageColumnLabel = isIbuIbu ? "Umur" : "Umur";
 
   return (
     <div
@@ -16,7 +15,6 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
       className="bg-white p-8 md:p-10 rounded-2xl"
       style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
     >
-      {/* Header */}
       <div className="border-b-2 border-slate-200 pb-5 mb-6">
         <div className="flex items-center gap-2 text-brand-600 mb-2">
           <Trophy className="h-5 w-5" />
@@ -31,8 +29,12 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
           <div className="flex items-center gap-1.5">
             <Users className="h-4 w-4 text-slate-400" />
             <span>
-              Kategori <strong className="text-slate-900">{meta?.label}</strong> (
-              {getCategoryAgeLabel(state.category)})
+              Kategori{" "}
+              <strong className="text-slate-900">
+                {meta?.label}
+                {state.subCategoryMeta ? ` — ${state.subCategoryMeta.label}` : ""}
+              </strong>{" "}
+              ({getCategoryAgeLabel(state.category)})
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -42,7 +44,6 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
         </div>
       </div>
 
-      {/* Table */}
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-slate-100">
@@ -53,7 +54,7 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
               Nama
             </th>
             <th className="border border-slate-300 px-3 py-2 text-center text-xs font-bold text-slate-700 uppercase w-20">
-              {ageColumnLabel}
+              Umur
             </th>
           </tr>
         </thead>
@@ -74,7 +75,6 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
         </tbody>
       </table>
 
-      {/* Footer */}
       <div className="mt-6 pt-5 border-t-2 border-slate-200 flex items-center justify-between">
         <div className="text-sm text-slate-600">
           Total Peserta:{" "}

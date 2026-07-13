@@ -26,8 +26,17 @@ export default function CategoryPage() {
       toast.warning("Pilih kategori terlebih dahulu");
       return;
     }
-    navigate(ROUTES.PARTICIPANTS);
+    if (state.category === "anak") {
+      navigate(ROUTES.SUB_CATEGORY);
+    } else {
+      navigate(ROUTES.PARTICIPANTS);
+    }
   };
+
+  const buttonLabel =
+    state.category === "anak"
+      ? "Pilih Sub Kategori"
+      : "Mulai Input Peserta";
 
   return (
     <div>
@@ -38,7 +47,7 @@ export default function CategoryPage() {
       />
 
       <Card padding="md" className="mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {CATEGORIES.map((cat) => (
             <CategoryCard
               key={cat.id}
@@ -57,7 +66,7 @@ export default function CategoryPage() {
         onClick={handleContinue}
         iconRight={<ArrowRight className="h-4 w-4" />}
       >
-        Mulai Input Peserta
+        {buttonLabel}
       </Button>
     </div>
   );

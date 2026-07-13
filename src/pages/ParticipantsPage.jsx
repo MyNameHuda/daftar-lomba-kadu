@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Edit3 } from "lucide-react";
 import { useContest } from "@/context/ContestContext";
 import { getCategoryById, getCategoryAgeLabel } from "@/constants/categories";
+import { getSubCategoryLabel } from "@/constants/subCategories";
 import { ParticipantForm } from "@/components/contest/ParticipantForm";
 import { ParticipantTable } from "@/components/contest/ParticipantTable";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -13,17 +14,32 @@ export default function ParticipantsPage() {
   const navigate = useNavigate();
   const meta = getCategoryById(state.category);
 
+  const parts = [state.contestName, meta?.label];
+  if (state.subCategory) parts.push(getSubCategoryLabel(state.subCategory));
+  if (state.category && getCategoryAgeLabel(state.category)) {
+    parts.push(`(${getCategoryAgeLabel(state.category)})`);
+  }
+  const subtitle = parts.filter(Boolean).join(" · ");
+
   return (
     <div className="space-y-4">
       <PageHeader
         title="Input Peserta"
-        subtitle={`${state.contestName} · ${meta?.label} (${getCategoryAgeLabel(state.category)})`}
-        backTo={ROUTES.CATEGORY}
+        subtitle={subtitle}
+        backTo={
+          state.category === "anak" ? ROUTES.SUB_CATEGORY : ROUTES.CATEGORY
+        }
         actions={
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => navigate(ROUTES.CATEGORY)}
+            onClick={() =>
+              navigate(
+                state.category === "anak"
+                  ? ROUTES.SUB_CATEGORY
+                  : ROUTES.CATEGORY
+              )
+            }
             icon={<Edit3 className="h-4 w-4" />}
             className="hidden sm:inline-flex"
           >

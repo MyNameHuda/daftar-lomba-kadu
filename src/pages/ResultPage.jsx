@@ -48,12 +48,7 @@ export default function ResultPage() {
       state.category,
       "xlsx"
     );
-    const result = await exportToXlsx(
-      state.participants,
-      state.contestName,
-      state.category,
-      filename
-    );
+    const result = await exportToXlsx(state, filename);
     if (result.ok) {
       toast.success(`Berhasil didownload: ${filename}`);
     } else {

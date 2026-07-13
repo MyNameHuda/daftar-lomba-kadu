@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo } from "react";
 import { usePersistentReducer } from "@/hooks/usePersistentReducer";
 import { sortParticipants } from "@/utils/sortParticipants";
 import { getCategoryById } from "@/constants/categories";
+import { getSubCategoryById } from "@/constants/subCategories";
 
 export const ContestStateContext = createContext(null);
 export const ContestDispatchContext = createContext(null);
@@ -10,6 +11,7 @@ export const CONTEST_ACTIONS = {
   HYDRATE: "HYDRATE",
   SET_CONTEST_NAME: "SET_CONTEST_NAME",
   SET_CATEGORY: "SET_CATEGORY",
+  SET_SUB_CATEGORY: "SET_SUB_CATEGORY",
   ADD_PARTICIPANT: "ADD_PARTICIPANT",
   EDIT_PARTICIPANT: "EDIT_PARTICIPANT",
   DELETE_PARTICIPANT: "DELETE_PARTICIPANT",
@@ -20,6 +22,7 @@ export const CONTEST_ACTIONS = {
 export const INITIAL_CONTEST_STATE = {
   contestName: null,
   category: null,
+  subCategory: null,
   participants: [],
 };
 
@@ -32,7 +35,14 @@ export function contestReducer(state, action) {
       return { ...state, contestName: action.payload };
 
     case CONTEST_ACTIONS.SET_CATEGORY:
-      return { ...state, category: action.payload };
+      return {
+        ...state,
+        category: action.payload,
+        subCategory: null,
+      };
+
+    case CONTEST_ACTIONS.SET_SUB_CATEGORY:
+      return { ...state, subCategory: action.payload };
 
     case CONTEST_ACTIONS.ADD_PARTICIPANT: {
       const next = [
@@ -82,9 +92,13 @@ export function ContestProvider({ children }) {
 
   const value = useMemo(() => {
     const meta = state.category ? getCategoryById(state.category) : null;
+    const subMeta = state.subCategory
+      ? getSubCategoryById(state.subCategory)
+      : null;
     return {
       ...state,
       categoryMeta: meta,
+      subCategoryMeta: subMeta,
       ageRange: meta ? { min: meta.ageMin, max: meta.ageMax } : null,
       totalParticipants: state.participants.length,
     };

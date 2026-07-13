@@ -7,6 +7,10 @@ export function RouteGuard({ require = [], redirectTo = "/" }) {
   const isValid = require.every((field) => {
     if (field === "contestName") return !!state.contestName;
     if (field === "category") return !!state.category;
+    if (field === "subCategory") {
+      if (state.category === "anak") return !!state.subCategory;
+      return true;
+    }
     if (field === "participants") return state.participants.length > 0;
     return true;
   });

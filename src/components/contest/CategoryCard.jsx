@@ -1,6 +1,6 @@
-import { Baby, Smile, Users, Check } from "lucide-react";
+import { Baby, Smile, Users, User, Check } from "lucide-react";
 
-const ICONS = { Baby, Smile, Users };
+const ICONS = { Baby, Smile, Users, User };
 
 export function CategoryCard({ category, selected = false, onClick }) {
   const Icon = ICONS[category.iconName] ?? Users;
@@ -39,8 +39,11 @@ export function CategoryCard({ category, selected = false, onClick }) {
         {category.description}
       </p>
       <p className={`mt-3 text-xs font-semibold ${category.accent}`}>
-        Umur {category.ageMin}
-        {category.ageMax !== undefined ? `–${category.ageMax}` : "+"} tahun
+        {category.ageMin !== undefined
+          ? `Umur ${category.ageMin}${
+              category.ageMax !== undefined ? `–${category.ageMax}` : "+"
+            } tahun`
+          : category.shortLabel ?? ""}
       </p>
     </button>
   );

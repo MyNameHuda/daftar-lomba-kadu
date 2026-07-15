@@ -26,6 +26,27 @@ function getUrl() {
 }
 
 /**
+ * Run a query with a hard timeout. Prevents one bad connection
+ * from hanging the function all the way to Vercel's 10s gateway
+ * timeout (which becomes an opaque 504 FUNCTION_INVOCATION_TIMEOUT).
+ *
+ * Default 5s is well under Vercel's free-plan 10s cap, leaving
+ * headroom for response serialization.
+ *
+ * @template T
+ * @param {Promise<T>} p
+ * @param {number} [ms=5000]
+ * @returns {Promise<T>}
+ */
+export function withTimeout(p, ms = 5000) {
+  let t;
+  const timeout = new Promise((_, reject) => {
+    t = setTimeout(() => reject(new Error(`DB timeout after ${ms}ms`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(t));
+}
+
+/**
  * Get raw SQL executor (for one-shot queries).
  * The function is created once and reused for the lifetime of the process.
  * Usage: const sql = getSql(); const rows = await sql`SELECT 1`;

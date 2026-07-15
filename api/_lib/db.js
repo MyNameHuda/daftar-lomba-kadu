@@ -3,8 +3,7 @@
 // =====================================================
 // Works in:
 // - Vercel Serverless Functions
-// - Vercel Edge Functions
-// - Local Node.js scripts
+// - Local Node.js scripts (migrate / seed / reset)
 // =====================================================
 //
 // We cache the `neon()` SQL tag at module scope so the underlying HTTP/2
@@ -13,10 +12,7 @@
 // slow + can hit Vercel's 10s function timeout on Neon cold start.
 // =====================================================
 
-import { neon, neonConfig, Pool } from "@neondatabase/serverless";
-
-// Reuse HTTP/2 connections across queries. Safe in both dev and prod.
-neonConfig.fetchConnectionCache = true;
+import { neon, Pool } from "@neondatabase/serverless";
 
 let cachedSql = null;
 let cachedPool = null;

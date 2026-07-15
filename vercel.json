@@ -1,4 +1,30 @@
 {
+  "functions": {
+    "api/auth/login.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/auth/me.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/contests/index.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/contests/[id].js": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/contests/[id]/participants.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/participants/[id].js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     { "source": "/((?!api/|assets/|.*\\.).*)", "destination": "/index.html" }
   ],

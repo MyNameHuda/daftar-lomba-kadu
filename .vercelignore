@@ -1,0 +1,5 @@
+# Local dev server (not for production deployment)
+api/dev-server.mjs
+
+# Local DB scripts (run via `npm run db:*` on your machine, never on Vercel)
+api/scripts/

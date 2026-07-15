@@ -10,7 +10,12 @@ import { ok, badRequest, unauthorized, handleCors, serverError } from "../_lib/r
 
 export const config = { runtime: "nodejs" };
 
-export default async function handler(request) {
+// Vercel function signature: `export const fetch` triggers the Web Fetch API
+// handler style. Using `export default` makes Vercel treat the file as a
+// Node.js HTTP handler `(req, res) => void` — in that style the returned
+// Response is ignored and the function hangs to 10s, returning 504.
+// See: https://vercel.com/docs/functions/functions-api-reference
+export const fetch = async function handler(request) {
   const t0 = Date.now();
   const log = (label, extra = "") =>
     console.log(
@@ -76,4 +81,4 @@ export default async function handler(request) {
     console.error(`[login] FAIL +${Date.now() - t0}ms:`, err);
     return serverError("Login gagal", request);
   }
-}
+};

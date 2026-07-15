@@ -12,33 +12,33 @@ const routes = [
   {
     method: "POST",
     pattern: /^\/api\/auth\/login$/,
-    load: () => import("./auth/login.js").then((m) => m.default),
+    load: () => import("./auth/login.js").then((m) => m.fetch),
   },
   {
     method: "GET",
     pattern: /^\/api\/auth\/me$/,
-    load: () => import("./auth/me.js").then((m) => m.default),
+    load: () => import("./auth/me.js").then((m) => m.fetch),
   },
   {
     methods: ["GET", "POST"],
     pattern: /^\/api\/contests$/,
-    load: () => import("./contests/index.js").then((m) => m.default),
+    load: () => import("./contests/index.js").then((m) => m.fetch),
   },
   {
     methods: ["GET", "PUT", "DELETE"],
     pattern: /^\/api\/contests\/(\d+)$/,
-    load: () => import("./contests/[id].js").then((m) => m.default),
+    load: () => import("./contests/[id].js").then((m) => m.fetch),
   },
   {
     methods: ["GET", "POST"],
     pattern: /^\/api\/contests\/(\d+)\/participants$/,
     load: () =>
-      import("./contests/[id]/participants.js").then((m) => m.default),
+      import("./contests/[id]/participants.js").then((m) => m.fetch),
   },
   {
     methods: ["PUT", "DELETE"],
     pattern: /^\/api\/participants\/(\d+)$/,
-    load: () => import("./participants/[id].js").then((m) => m.default),
+    load: () => import("./participants/[id].js").then((m) => m.fetch),
   },
 ];
 

@@ -25,8 +25,8 @@ import {
 
 export const config = { runtime: "nodejs" };
 
-export default async function handler(request) {
-  if (request.method === "OPTIONS") return handleCors();
+export const fetch = async function handler(request) {
+  if (request.method === "OPTIONS") return handleCors(request);
 
   if (request.method === "GET") {
     return handleList(request);
@@ -34,8 +34,8 @@ export default async function handler(request) {
   if (request.method === "POST") {
     return handleCreate(request);
   }
-  return badRequest("Method tidak diizinkan");
-}
+  return badRequest("Method tidak diizinkan", request);
+};
 
 async function handleList(_request) {
   try {

@@ -16,19 +16,19 @@ import {
 
 export const config = { runtime: "nodejs" };
 
-export default async function handler(request, context) {
-  if (request.method === "OPTIONS") return handleCors();
+export const fetch = async function handler(request, context) {
+  if (request.method === "OPTIONS") return handleCors(request);
 
   const { id } = context.params || {};
   const participantId = Number(id);
   if (!Number.isInteger(participantId) || participantId <= 0) {
-    return badRequest("ID peserta tidak valid");
+    return badRequest("ID peserta tidak valid", request);
   }
 
   if (request.method === "PUT") return handlePut(request, participantId);
   if (request.method === "DELETE") return handleDelete(request, participantId);
-  return badRequest("Method tidak diizinkan");
-}
+  return badRequest("Method tidak diizinkan", request);
+};
 
 async function handlePut(request, participantId) {
   const auth = await requireAdmin(request);

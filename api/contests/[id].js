@@ -20,20 +20,20 @@ import {
 
 export const config = { runtime: "nodejs" };
 
-export default async function handler(request, context) {
-  if (request.method === "OPTIONS") return handleCors();
+export const fetch = async function handler(request, context) {
+  if (request.method === "OPTIONS") return handleCors(request);
 
   const { id } = context.params || {};
   const contestId = Number(id);
   if (!Number.isInteger(contestId) || contestId <= 0) {
-    return badRequest("ID lomba tidak valid");
+    return badRequest("ID lomba tidak valid", request);
   }
 
   if (request.method === "GET") return handleGet(contestId);
   if (request.method === "PUT") return handlePut(request, contestId);
   if (request.method === "DELETE") return handleDelete(request, contestId);
-  return badRequest("Method tidak diizinkan");
-}
+  return badRequest("Method tidak diizinkan", request);
+};
 
 async function handleGet(contestId) {
   try {

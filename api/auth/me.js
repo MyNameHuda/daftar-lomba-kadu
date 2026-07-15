@@ -8,14 +8,14 @@ import { ok, handleCors } from "../_lib/response.js";
 
 export const config = { runtime: "nodejs" };
 
-export default async function handler(request) {
-  if (request.method === "OPTIONS") return handleCors();
+export const fetch = async function handler(request) {
+  if (request.method === "OPTIONS") return handleCors(request);
   if (request.method !== "GET") {
-    return ok({ error: "Method not allowed" });
+    return ok({ error: "Method not allowed" }, request);
   }
 
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  return ok({ admin: { id: auth.id, username: auth.username } });
-}
+  return ok({ admin: { id: auth.id, username: auth.username } }, request);
+};

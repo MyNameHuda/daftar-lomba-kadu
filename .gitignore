@@ -28,3 +28,6 @@ pnpm-debug.log*
 # One-off debug / smoke-test scripts (created during local troubleshooting)
 tmp-*.mjs
 tmp-*.log
+
+.vercel
+.env*

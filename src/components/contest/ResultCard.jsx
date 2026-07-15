@@ -1,13 +1,19 @@
 import { forwardRef } from "react";
 import { Trophy, Users, Calendar } from "lucide-react";
-import { useContest } from "@/context/ContestContext";
 import { getCategoryById, getCategoryAgeLabel } from "@/constants/categories";
+import { getSubCategoryById } from "@/constants/subCategories";
 import { formatDateID } from "@/utils/dateFormat";
 
-export const ResultCard = forwardRef(function ResultCard(_, ref) {
-  const { state } = useContest();
-  const meta = getCategoryById(state.category);
-  const isIbuIbu = state.category === "ibu-ibu";
+/**
+ * Read-only result card used for public viewing & PNG export.
+ * @param {object} props
+ * @param {object} props.contest - { id, name, category, sub_category, age_min, age_max }
+ * @param {Array} props.participants - [{ id, name, age }]
+ */
+export const ResultCard = forwardRef(function ResultCard({ contest, participants }, ref) {
+  const meta = getCategoryById(contest?.category);
+  const subMeta = contest?.sub_category ? getSubCategoryById(contest.sub_category) : null;
+  const isIbuIbu = contest?.category === "ibu-ibu";
 
   return (
     <div
@@ -23,7 +29,7 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
           </span>
         </div>
         <h1 className="text-2xl md:text-3xl font-bold text-slate-900 leading-tight">
-          {state.contestName}
+          {contest?.name ?? "Lomba"}
         </h1>
         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-600">
           <div className="flex items-center gap-1.5">
@@ -31,10 +37,10 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
             <span>
               Kategori{" "}
               <strong className="text-slate-900">
-                {meta?.label}
-                {state.subCategoryMeta ? ` — ${state.subCategoryMeta.label}` : ""}
+                {meta?.label ?? "-"}
+                {subMeta ? ` — ${subMeta.label}` : ""}
               </strong>{" "}
-              ({getCategoryAgeLabel(state.category)})
+              ({getCategoryAgeLabel(contest?.category)})
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -59,7 +65,7 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
           </tr>
         </thead>
         <tbody>
-          {state.participants.map((p, i) => (
+          {(participants ?? []).map((p, i) => (
             <tr key={p.id}>
               <td className="border border-slate-300 px-3 py-2 text-center text-sm text-slate-700">
                 {i + 1}
@@ -79,7 +85,7 @@ export const ResultCard = forwardRef(function ResultCard(_, ref) {
         <div className="text-sm text-slate-600">
           Total Peserta:{" "}
           <strong className="text-slate-900 text-base">
-            {state.participants.length}
+            {participants?.length ?? 0}
           </strong>{" "}
           orang
         </div>

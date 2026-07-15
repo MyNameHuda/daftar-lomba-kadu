@@ -1,6 +1,8 @@
 export const SUB_CATEGORIES = [
   {
-    id: "laki-laki",
+    // id values must match api/_lib/validation.js (VALID_SUB_CATEGORIES)
+    // and the DB schema CHECK constraint (both use underscores).
+    id: "laki_laki",
     label: "Anak Laki-laki",
     description: "Untuk peserta laki-laki",
     iconName: "User",

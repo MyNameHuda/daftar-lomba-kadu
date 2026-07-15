@@ -1,20 +1,24 @@
 import { Users } from "lucide-react";
-import { useContest } from "@/context/ContestContext";
 import { ParticipantRow } from "./ParticipantRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 
-export function ParticipantTable() {
-  const { state } = useContest();
-  const { participants } = state;
-
+/**
+ * Table of participants with edit/delete actions (used in admin view).
+ * @param {object} props
+ * @param {object} props.contest - { category, age_min, age_max }
+ * @param {Array} props.participants
+ * @param {Function} props.onUpdate - (id, payload) => Promise
+ * @param {Function} props.onDelete - (id) => Promise
+ */
+export function ParticipantTable({ contest, participants = [], onUpdate, onDelete }) {
   if (participants.length === 0) {
     return (
       <Card padding="md">
         <EmptyState
           icon={<Users className="h-7 w-7" />}
           title="Belum ada peserta"
-          description="Tambahkan peserta pertama Anda menggunakan form di atas"
+          description="Tambahkan peserta pertama menggunakan form di atas"
         />
       </Card>
     );
@@ -48,7 +52,15 @@ export function ParticipantTable() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {participants.map((p, i) => (
-              <ParticipantRow key={p.id} participant={p} index={i} />
+              <ParticipantRow
+                key={p.id}
+                participant={p}
+                index={i}
+                contest={contest}
+                participants={participants}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+              />
             ))}
           </tbody>
         </table>

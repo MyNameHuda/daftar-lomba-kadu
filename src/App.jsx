@@ -1,15 +1,17 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { RouteGuard } from "@/components/common/RouteGuard";
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import { RequireAuth } from "@/components/common/RequireAuth";
 import { Spinner } from "@/components/ui/Spinner";
 import { ROUTES } from "@/constants/routes";
 
 const HomePage = lazy(() => import("@/pages/HomePage"));
-const CategoryPage = lazy(() => import("@/pages/CategoryPage"));
-const SubCategoryPage = lazy(() => import("@/pages/SubCategoryPage"));
-const ParticipantsPage = lazy(() => import("@/pages/ParticipantsPage"));
-const ResultPage = lazy(() => import("@/pages/ResultPage"));
+const ContestDetailPage = lazy(() => import("@/pages/ContestDetailPage"));
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const AdminDashboardPage = lazy(() => import("@/pages/AdminDashboardPage"));
+const AdminContestFormPage = lazy(() => import("@/pages/AdminContestFormPage"));
+const AdminParticipantsPage = lazy(() => import("@/pages/AdminParticipantsPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 function PageLoader() {
@@ -20,85 +22,99 @@ function PageLoader() {
   );
 }
 
+function ScrollToTop() {
+  useLocation();
+  if (typeof window !== "undefined") {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+  return null;
+}
+
 export default function App() {
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
+    <>
+      <ScrollToTop />
+      <Routes>
+        {/* Public layout (with header) */}
+        <Route element={<AppLayout />}>
+          <Route
+            path={ROUTES.HOME}
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <HomePage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.CONTEST_DETAIL}
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <ContestDetailPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <NotFoundPage />
+              </Suspense>
+            }
+          />
+        </Route>
+
+        {/* Login (own layout, no header) */}
         <Route
-          path={ROUTES.HOME}
+          path={ROUTES.ADMIN_LOGIN}
           element={
             <Suspense fallback={<PageLoader />}>
-              <HomePage />
+              <LoginPage />
             </Suspense>
           }
         />
 
+        {/* Admin (own layout, requires auth) */}
         <Route
-          path={ROUTES.CATEGORY}
           element={
-            <>
-              <RouteGuard require={["contestName"]} redirectTo={ROUTES.HOME} />
+            <RequireAuth>
+              <AdminLayout />
+            </RequireAuth>
+          }
+        >
+          <Route
+            path={ROUTES.ADMIN_DASHBOARD}
+            element={
               <Suspense fallback={<PageLoader />}>
-                <CategoryPage />
+                <AdminDashboardPage />
               </Suspense>
-            </>
-          }
-        />
-
-        <Route
-          path={ROUTES.SUB_CATEGORY}
-          element={
-            <>
-              <RouteGuard
-                require={["contestName", "category"]}
-                redirectTo={ROUTES.HOME}
-              />
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_CONTEST_NEW}
+            element={
               <Suspense fallback={<PageLoader />}>
-                <SubCategoryPage />
+                <AdminContestFormPage />
               </Suspense>
-            </>
-          }
-        />
-
-        <Route
-          path={ROUTES.PARTICIPANTS}
-          element={
-            <>
-              <RouteGuard
-                require={["contestName", "category", "subCategory"]}
-                redirectTo={ROUTES.HOME}
-              />
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_CONTEST_EDIT}
+            element={
               <Suspense fallback={<PageLoader />}>
-                <ParticipantsPage />
+                <AdminContestFormPage />
               </Suspense>
-            </>
-          }
-        />
-
-        <Route
-          path={ROUTES.RESULT}
-          element={
-            <>
-              <RouteGuard
-                require={["contestName", "category", "participants"]}
-                redirectTo={ROUTES.HOME}
-              />
+            }
+          />
+          <Route
+            path="/admin/lomba/:id/peserta"
+            element={
               <Suspense fallback={<PageLoader />}>
-                <ResultPage />
+                <AdminParticipantsPage />
               </Suspense>
-            </>
-          }
-        />
-
-        <Route
-          path="*"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <NotFoundPage />
-            </Suspense>
-          }
-        />
-      </Route>
-    </Routes>
+            }
+          />
+        </Route>
+      </Routes>
+    </>
   );
 }

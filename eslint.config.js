@@ -6,8 +6,9 @@ import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
   { ignores: ["dist", "node_modules"] },
+  // Browser (React/Vite) — frontend code under src/
   {
-    files: ["**/*.{js,jsx}"],
+    files: ["src/**/*.{js,jsx}"],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -33,6 +34,22 @@ export default [
       "react-refresh/only-export-components": "off",
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+    },
+  },
+  // Node.js — API/handlers under api/
+  {
+    files: ["api/**/*.{js,mjs}"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: { ...globals.node },
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+    },
+    rules: {
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "no-console": "off",
     },
   },
 ];

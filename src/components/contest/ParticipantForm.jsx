@@ -1,10 +1,8 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { User, Plus, Info } from "lucide-react";
-import { useContest } from "@/context/ContestContext";
-import { CONTEST_ACTIONS } from "@/context/ContestContext";
-import { useToast } from "@/hooks/useToast";
-import { validateName, isDuplicate } from "@/utils/validation";
-import { generateId } from "@/utils/id";
+import { validateName } from "@/utils/validation";
+import { getCategoryById } from "@/constants/categories";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -12,10 +10,20 @@ import { AgePicker } from "./AgePicker";
 
 const DEFAULT_IBU_IBU_AGE = 18;
 
-export function ParticipantForm() {
-  const { state, dispatch } = useContest();
-  const toast = useToast();
-  const isIbuIbu = state.category === "ibu-ibu";
+/**
+ * Form to add a participant.
+ * @param {object} props
+ * @param {object} props.contest - { id, category } (age range is derived from category via CATEGORIES)
+ * @param {Array} props.participants - current participants (for duplicate check)
+ * @param {(payload: {name: string, age: number}) => Promise<boolean>} props.onAdd
+ */
+export function ParticipantForm({ contest, participants = [], onAdd }) {
+  const isIbuIbu = contest?.category === "ibu-ibu";
+  // Age bounds are derived from the contest's category — single source of truth
+  // (mirrored on the backend in api/_lib/ageRange.js).
+  const categoryMeta = getCategoryById(contest?.category);
+  const ageMin = categoryMeta?.ageMin ?? 0;
+  const ageMax = categoryMeta?.ageMax ?? null;
 
   const {
     register,
@@ -33,6 +41,7 @@ export function ParticipantForm() {
 
   const nameValue = watch("name") ?? "";
   const ageValue = watch("age") ?? "";
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAgeSelect = (age) => {
     setValue("age", String(age), { shouldValidate: true, shouldDirty: true });
@@ -43,8 +52,7 @@ export function ParticipantForm() {
     const nameResult = validateName(data.name);
     if (!nameResult.valid) {
       setError("name", { type: "manual", message: nameResult.error });
-      toast.error(nameResult.error);
-      return;
+      return { ok: false, error: nameResult.error };
     }
 
     let finalAge;
@@ -53,40 +61,41 @@ export function ParticipantForm() {
     } else {
       if (!data.age || data.age === "") {
         setError("age", { type: "manual", message: "Pilih umur peserta" });
-        toast.error("Pilih umur peserta");
-        return;
+        return { ok: false, error: "Pilih umur peserta" };
       }
       const ageNum = Number(data.age);
       if (Number.isNaN(ageNum)) {
         setError("age", { type: "manual", message: "Umur tidak valid" });
-        toast.error("Umur tidak valid");
-        return;
+        return { ok: false, error: "Umur tidak valid" };
       }
       finalAge = ageNum;
     }
 
-    if (isDuplicate(state.participants, nameResult.value, finalAge)) {
+    // Local duplicate check
+    const normalized = nameResult.value.trim().toLowerCase();
+    const duplicate = participants.some(
+      (p) => p.name.toLowerCase() === normalized && Number(p.age) === finalAge
+    );
+    if (duplicate) {
       setError("name", {
         type: "manual",
         message: "Peserta dengan nama dan umur yang sama sudah ada",
       });
-      toast.error("Peserta duplikat");
-      return;
+      return { ok: false, error: "Peserta duplikat" };
     }
 
-    dispatch({
-      type: CONTEST_ACTIONS.ADD_PARTICIPANT,
-      payload: {
-        id: generateId(),
-        name: nameResult.value,
-        age: finalAge,
-      },
-    });
-    toast.success(`${nameResult.value} ditambahkan`);
-    reset({
-      name: "",
-      age: isIbuIbu ? String(DEFAULT_IBU_IBU_AGE) : "",
-    });
+    setSubmitting(true);
+    try {
+      const result = await onAdd({ name: nameResult.value, age: finalAge });
+      if (result?.ok) {
+        reset({ name: "", age: isIbuIbu ? String(DEFAULT_IBU_IBU_AGE) : "" });
+      } else if (result?.error) {
+        setError("name", { type: "manual", message: result.error });
+      }
+      return result;
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -128,8 +137,8 @@ export function ParticipantForm() {
           </div>
         ) : (
           <AgePicker
-            min={state.ageRange?.min ?? 0}
-            max={state.ageRange?.max ?? 0}
+            min={ageMin}
+            max={ageMax}
             value={ageValue}
             onChange={handleAgeSelect}
             error={errors.age?.message}
@@ -142,7 +151,8 @@ export function ParticipantForm() {
           </div>
           <Button
             type="submit"
-            disabled={!isValid}
+            disabled={!isValid || submitting}
+            loading={submitting}
             icon={<Plus className="h-4 w-4" />}
           >
             Tambah

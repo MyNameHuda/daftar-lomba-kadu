@@ -1,9 +1,62 @@
 # 🏗️ BLUEPRINT TEKNIS — DAFTAR LOMBA KADU
 
-> **Versi:** 1.0
-> **Tanggal:** 13 Juli 2026
+> **Versi:** 2.0
+> **Tanggal:** 15 Juli 2026
 > **Tipe Dokumen:** Technical Design Document (TDD)
 > **Tujuan:** Acuan tunggal untuk implementasi, review, dan pengembangan lanjutan.
+
+---
+
+## ⚠️ v2.0 CHANGELOG (15 Juli 2026)
+
+v2 adalah **rewrite besar** dari v1. Dokumen ini masih menyimpan detail design system & component spec dari v1, tapi baca dulu changelog ini untuk konteks.
+
+### Apa yang berubah drastis
+
+| Aspek | v1 | v2 |
+|---|---|---|
+| Arsitektur | Pure frontend SPA | Frontend + Backend (full-stack) |
+| Database | LocalStorage (per device) | Postgres via Neon (shared, server-side) |
+| Auth | ❌ Tidak ada | ✅ JWT login admin |
+| Multi-lomba | ❌ Single session, reset untuk mulai baru | ✅ Multiple lomba persisted, browse via dashboard |
+| Backend | ❌ | Node.js serverless functions (`api/`) |
+| State management | Global `ContestContext` + reducer | Per-page fetch (no global app state) |
+| Routing | 5 pages (single flow) | 2 layout: public (`/`, `/lomba/:id`) + admin (`/admin/*`) |
+| Vercel | Frontend only | Frontend + serverless API |
+
+### File yang dihapus di v2
+
+- `src/context/ContestContext.jsx` (replaced by per-page API fetch)
+- `src/hooks/usePersistentReducer.js` (no longer needed)
+- `src/utils/storage.js` (LocalStorage strategy obsolete)
+- `src/components/common/RouteGuard.jsx` (replaced by `RequireAuth`)
+- `src/pages/CategoryPage.jsx`, `SubCategoryPage.jsx`, `ParticipantsPage.jsx`, `ResultPage.jsx` (v1 single-session flow)
+- `src/components/contest/ContestNameForm.jsx` (no name-first flow in v2)
+
+### File baru di v2
+
+```
+src/lib/api.js                              # API client (fetch wrapper + JWT auth header)
+src/context/AuthContext.jsx                 # Admin session state
+src/components/common/RequireAuth.jsx       # Guard untuk route admin
+src/components/layout/AdminLayout.jsx       # Layout terpisah untuk admin
+src/pages/HomePage.jsx                      # REWRITTEN: list contests (public)
+src/pages/ContestDetailPage.jsx             # NEW: view single contest (public)
+src/pages/LoginPage.jsx                     # NEW: admin login
+src/pages/AdminDashboardPage.jsx            # NEW: list contests (admin) + actions
+src/pages/AdminContestFormPage.jsx          # NEW: create/edit contest
+src/pages/AdminParticipantsPage.jsx         # NEW: manage participants of one contest
+api/_lib/                                   # Shared backend helpers (db, auth, response, validation)
+api/auth/                                   # /api/auth/login, /api/auth/me
+api/contests/                               # /api/contests, /api/contests/:id, /api/contests/:id/participants
+api/participants/[id].js                    # /api/participants/:id (PUT, DELETE)
+api/scripts/                                # migrate, seed, reset, inspect, debug-parse
+api/dev-server.mjs                          # Local API server (Vite proxies /api/* ke sini)
+```
+
+### Validasi tetap double-check (client + server)
+
+Rules di `src/utils/validation.js` dan `api/_lib/validation.js` adalah mirror satu sama lain. Selalu update keduanya kalau ada perubahan rules.
 
 ---
 
@@ -36,38 +89,41 @@
 
 ### 1.1 Deskripsi Produk
 
-**Daftar Lomba Kadu** adalah aplikasi web *single-page* (SPA) yang membantu panitia lomba 17 Agustus (atau lomba apa pun) untuk:
+**Daftar Lomba Kadu v2** adalah aplikasi web full-stack yang membantu panitia lomba untuk:
 
-1. **Mendata peserta** berdasarkan nama lomba dan kategori usia.
-2. **Mengurutkan otomatis** peserta berdasarkan umur (ascending) lalu nama (A-Z).
-3. **Mengekspor hasil** ke gambar PNG siap cetak / share ke grup WhatsApp.
+1. **Mengelola banyak lomba** — admin bisa daftarkan, edit, hapus lomba.
+2. **Mendata peserta per lomba** — admin input nama + umur, peserta ter-sort otomatis.
+3. **Mengekspor hasil publik** — siapa saja (tanpa login) bisa buka link lomba, lihat peserta terurut, dan export ke PNG/XLSX.
+4. **Login admin** — satu akun admin (untuk versi ini) dengan JWT auth.
 
 ### 1.2 Karakteristik Teknis
 
 | Aspek | Keputusan |
 |---|---|
-| Arsitektur | Pure frontend SPA |
-| Backend | ❌ Tidak ada |
-| Database | ❌ Tidak ada |
-| Auth | ❌ Tidak ada |
-| State persistence | LocalStorage (versioned) |
-| Build tool | Vite 5+ |
+| Arsitektur | Frontend SPA + Backend serverless (Vercel) |
+| Backend | Node.js (ESM) — handler per-file di `api/` |
+| Database | Postgres via Neon (serverless driver `@neondatabase/serverless`) |
+| Auth | JWT (jsonwebtoken) + bcryptjs — 7 hari expiry |
+| State persistence | Server-side (database) + JWT in localStorage untuk session |
+| Build tool | Vite 6 |
 | Framework | React 19 |
 | Styling | Tailwind CSS v4 |
 | Routing | React Router v7 |
 | Form | React Hook Form |
 | Icons | Lucide React |
-| Export | html2canvas |
-| Deploy | Vercel |
+| Export | html-to-image + xlsx |
+| Deploy | Vercel (auto-detect `api/*` sebagai serverless functions) |
 
 ### 1.3 Non-Goals (Sengaja Tidak Dibuat)
 
-- Login / multi-user
-- Sync antar device (perangkat)
-- Multi-lomba dalam satu sesi
-- Cetak langsung ke printer (cukup export PNG)
-- Edit lomba setelah finalisasi
-- Riwayat / audit log
+- Multi-user / role-based access (cuma single admin)
+- Real-time sync (WebSocket) antar device
+- Edit lomba via publik (read-only di publik, write cuma di admin)
+- Audit log / history perubahan
+- Print langsung ke printer
+- File upload (gambar, attachment)
+- Email notification
+- Mobile native app
 
 ---
 
@@ -426,43 +482,63 @@ const INITIAL_STATE = {
 
 ## 6. Routing Plan
 
-### 6.1 Route Table
+### 6.1 v2 Route Table
 
-| Path | Component | Guard | Title |
+v2 punya **2 layout** (public & admin) yang share router config di `src/App.jsx`. Halaman di-lazy-load via `React.lazy()`.
+
+#### Layout Publik (`<AppLayout />` — dengan Header publik + Footer)
+
+| Path | Component | Auth | Deskripsi |
 |---|---|---|---|
-| `/` | `HomePage` | None | "Mulai Lomba" |
-| `/kategori` | `CategoryPage` | `contestName` required | "Pilih Kategori" |
-| `/peserta` | `ParticipantsPage` | `contestName` + `category` required | "Input Peserta" |
-| `/hasil` | `ResultPage` | `contestName` + `category` required | "Hasil" |
-| `*` | `NotFoundPage` | None | "404" |
+| `/` | `HomePage` | — | List semua lomba (klik → detail) |
+| `/lomba/:id` | `ContestDetailPage` | — | Detail lomba + peserta + export PNG/XLSX |
+| `*` | `NotFoundPage` | — | 404 |
 
-### 6.2 RouteGuard Component
+#### Layout Admin (`<AdminLayout />` — header admin)
+
+| Path | Component | Auth | Deskripsi |
+|---|---|---|---|
+| `/admin/login` | `LoginPage` | — | Form login (layout sendiri, tanpa header) |
+| `/admin` | `AdminDashboardPage` | ✅ admin | List lomba + actions (edit, hapus, kelola peserta) |
+| `/admin/lomba/baru` | `AdminContestFormPage` | ✅ admin | Form buat lomba baru |
+| `/admin/lomba/:id` | `AdminContestFormPage` | ✅ admin | Mode read-only summary (default) |
+| `/admin/lomba/:id?edit=1` | `AdminContestFormPage` | ✅ admin | Mode edit (form) |
+| `/admin/lomba/:id/peserta` | `AdminParticipantsPage` | ✅ admin | Kelola peserta lomba |
+
+### 6.2 RequireAuth Component
 
 ```jsx
-<RouteGuard
-  require={["contestName", "category"]}
-  redirectTo="/"
->
-  <ParticipantsPage />
-</RouteGuard>
+<RequireAuth>
+  <AdminLayout />
+</RequireAuth>
 ```
 
-Logic: cek `useContest()`, kalau ada requirement yang null → `<Navigate to={redirectTo} replace />`.
+Logic: baca `useAuth()`. Kalau `isLoading` → spinner. Kalau `!isAuthed` → `<Navigate to="/admin/login" state={{ from: location }} />`. Kalau `isAuthed` → render children.
 
-### 6.3 BrowserRouter Setup
+Setelah login, user di-redirect ke `location.state.from` (atau `/admin` kalau direct).
+
+### 6.3 ScrollToTop
+
+Setiap navigasi, scroll ke atas. Implementasi: render `null` tapi panggil `window.scrollTo` di body-nya. Trigger: `useLocation()`.
+
+### 6.4 BrowserRouter Setup
 
 ```jsx
 // main.jsx
 import { BrowserRouter } from "react-router-dom";
 
 <BrowserRouter>
-  <ToastProvider>
-    <ContestProvider>
-      <App />
-    </ContestProvider>
-  </ToastProvider>
+  <AuthProvider>
+    <ToastProvider>
+      <ConfirmProvider>
+        <App />
+      </ConfirmProvider>
+    </ToastProvider>
+  </AuthProvider>
 </BrowserRouter>
 ```
+
+`AuthProvider` di luar router lain karena `RequireAuth` (di dalam router) butuh akses ke `useAuth()`. Toast/Confirm dibutuhkan di seluruh tree (termasuk AdminLayout).
 
 ---
 
@@ -1734,46 +1810,74 @@ Fitur yang **tidak dibuat sekarang** tapi bisa ditambahkan nanti:
 
 ---
 
-## 20. Acceptance Criteria
+## 20. Acceptance Criteria (v2)
 
-Aplikasi dianggap **selesai** kalau:
+Aplikasi v2 dianggap **selesai** kalau:
 
-### Fungsional
-- [ ] User bisa input nama lomba di `/`
-- [ ] User bisa pilih salah satu dari 4 kategori di `/kategori`
-- [ ] User bisa tambah peserta di `/peserta` dengan validasi nama & umur
-- [ ] User bisa edit peserta (inline)
-- [ ] User bisa hapus peserta dengan konfirmasi
-- [ ] User bisa reset seluruh data dengan konfirmasi
-- [ ] User bisa kembali ke halaman sebelumnya (back button)
-- [ ] User bisa download PNG di `/hasil` dengan nama sesuai format
-- [ ] Sorting otomatis bekerja (umur ASC, nama ASC)
-- [ ] Data persist setelah refresh (LocalStorage)
-- [ ] Toast notification muncul saat aksi sukses/gagal
-- [ ] Empty state muncul saat belum ada peserta
-- [ ] Route guard mengarahkan user ke halaman yang benar
-- [ ] Tombol disabled saat form invalid
-- [ ] Real-time validation (error muncul saat user mengetik)
+### Fungsional — Publik
+
+- [ ] User (tanpa login) bisa buka `/` dan lihat daftar lomba
+- [ ] User bisa klik salah satu lomba → `/lomba/:id`
+- [ ] Halaman detail menampilkan: nama, kategori, sub-kategori (jika ada), umur, peserta
+- [ ] Peserta auto-sort: umur ASC, nama A–Z
+- [ ] User bisa download PNG (filename: `nama-lomba-kategori.png`)
+- [ ] User bisa download XLSX (filename: `nama-lomba-kategori.xlsx`)
+- [ ] Empty state muncul saat lomba belum ada peserta
+- [ ] Halaman 404 untuk URL yang tidak dikenal
+
+### Fungsional — Admin
+
+- [ ] Admin bisa login di `/admin/login` dengan kredensial valid
+- [ ] Login gagal → pesan error yang jelas (username/password salah)
+- [ ] Token disimpan di localStorage, valid 7 hari
+- [ ] User yang belum login ke `/admin/*` → redirect ke `/admin/login`
+- [ ] Setelah login, redirect ke halaman yang dituju (atau `/admin`)
+- [ ] Dashboard menampilkan semua lomba + jumlah peserta
+- [ ] Admin bisa buat lomba baru (nama, kategori, sub-kategori, umur)
+- [ ] Validasi realtime: nama lomba min 3, kategori wajib, sub-kategori wajib untuk Anak
+- [ ] Admin bisa edit lomba (form pre-filled dengan data existing)
+- [ ] Admin bisa hapus lomba (konfirmasi, cascade hapus peserta)
+- [ ] Admin bisa tambah peserta ke lomba
+- [ ] Validasi: nama min 2, umur dalam range lomba, duplikat (nama+umur) ditolak
+- [ ] Admin bisa edit peserta inline
+- [ ] Admin bisa hapus peserta (konfirmasi)
+- [ ] Toast notification muncul untuk setiap aksi sukses/gagal
+- [ ] Logout: token di-clear, redirect ke `/admin/login`
+
+### Fungsional — Backend
+
+- [ ] `POST /api/auth/login` return token + admin info (atau 401)
+- [ ] `GET /api/auth/me` return admin info kalau token valid (atau 401)
+- [ ] `GET /api/contests` return list sorted by category
+- [ ] `POST /api/contests` butuh admin token
+- [ ] `GET /api/contests/:id` return contest + participants sorted
+- [ ] `PUT /api/contests/:id` butuh admin token
+- [ ] `DELETE /api/contests/:id` butuh admin token, cascade hapus participants
+- [ ] `POST /api/contests/:id/participants` butuh admin token, validasi umur
+- [ ] Validasi server: nama 2-100 char, umur 0-120, dalam range lomba
+- [ ] SQL injection safe (parameterized queries via `@neondatabase/serverless`)
+- [ ] CORS headers benar (origin dari `FRONTEND_ORIGIN`)
 
 ### Non-Fungsional
-- [ ] Mobile responsive (test di 375px, 768px, 1280px)
-- [ ] Load time < 2 detik di 3G (target Lighthouse score > 80)
-- [ ] Tidak ada console error saat flow normal
-- [ ] ESLint pass tanpa warning
-- [ ] Build success tanpa warning
-- [ ] Bundle size < 300KB gzipped
-- [ ] A11y: bisa navigasi pakai keyboard saja
-- [ ] A11y: contrast ratio >= 4.5:1
-- [ ] Deploy sukses ke Vercel
 
-### Code Quality
-- [ ] Tidak ada duplikasi kode
-- [ ] Komponen reusable (Button, Input, Card dipakai di >1 tempat)
-- [ ] Business logic terpisah dari komponen
-- [ ] Custom hooks untuk logic yang dipakai >1 tempat
-- [ ] Konstanta di `constants/`, bukan hard-coded
-- [ ] JSDoc untuk fungsi publik
-- [ ] Naming konsisten
+- [ ] Mobile responsive (test 375px, 768px, 1280px)
+- [ ] Load time < 2 detik di 3G
+- [ ] Tidak ada console error di flow normal
+- [ ] `npm run lint` pass tanpa error
+- [ ] `npm run build` sukses
+- [ ] Bundle size < 300KB gzipped
+- [ ] A11y: keyboard nav lengkap, ARIA labels, focus management
+- [ ] Deploy sukses ke Vercel (frontend + serverless API)
+- [ ] Database migration berhasil di Neon production
+- [ ] Admin seed berhasil di production
+
+### Security
+
+- [ ] Password di-hash (bcrypt), tidak pernah plain-text di DB
+- [ ] JWT secret di env var, minimal 32 char random
+- [ ] CORS origin dibatasi (bukan `*` di production)
+- [ ] Token invalid/expired → auto-logout
+- [ ] Tidak ada secret yang ke-commit (cek `.gitignore`)
 
 ---
 
@@ -1784,14 +1888,37 @@ Aplikasi dianggap **selesai** kalau:
 - [Tailwind CSS v4](https://tailwindcss.com/docs/installation/using-vite)
 - [React Router v7](https://reactrouter.com)
 - [React Hook Form](https://react-hook-form.com)
-- [html2canvas](https://html2canvas.hertzen.com)
+- [html-to-image](https://github.com/bubkoo/html-to-image) — pengganti html2canvas
+- [xlsx (SheetJS)](https://sheetjs.com/)
 - [Lucide React](https://lucide.dev)
+- [Neon Serverless Driver](https://neon.tech/docs/serverless/serverless-driver)
+- [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken)
+- [bcryptjs](https://github.com/dcodeIO/bcrypt.js)
 
 ## Lampiran B: Inspirasi UI
 
 - Tailwind UI (component patterns)
 - shadcn/ui (composition style)
 - Vercel Geist (minimalis modern)
+
+## Lampiran C: API Endpoints Quick Reference
+
+```
+POST   /api/auth/login                  → { token, admin }
+GET    /api/auth/me                     (admin) → { admin }
+
+GET    /api/contests                    → { contests: [...] }
+POST   /api/contests                    (admin) → { contest }
+GET    /api/contests/:id                → { contest, participants }
+PUT    /api/contests/:id                (admin) → { contest }
+DELETE /api/contests/:id                (admin) → { deleted: true }
+
+GET    /api/contests/:id/participants   → { participants: [...] }
+POST   /api/contests/:id/participants   (admin) → { participant }
+
+PUT    /api/participants/:id            (admin) → { participant }
+DELETE /api/participants/:id            (admin) → { deleted: true }
+```
 
 ---
 

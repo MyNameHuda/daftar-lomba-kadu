@@ -1,17 +1,24 @@
 {
   "name": "daftar-lomba-kadu",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "Aplikasi pendataan peserta lomba dengan export PNG",
+  "description": "Aplikasi pendataan peserta lomba dengan backend Postgres (Neon) dan admin panel",
   "scripts": {
     "dev": "vite",
+    "dev:api": "node api/dev-server.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:migrate": "node api/scripts/migrate.mjs",
+    "db:seed": "node api/scripts/seed.mjs",
+    "db:reset": "node api/scripts/reset.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.9.4",
+    "bcryptjs": "^2.4.3",
     "html-to-image": "^1.11.13",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.460.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -25,6 +32,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "dotenv": "^16.4.5",
     "eslint": "^9.0.0",
     "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^5.0.0",

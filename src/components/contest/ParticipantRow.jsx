@@ -1,44 +1,55 @@
 import { useState } from "react";
 import { Pencil, Trash2, Check, X, User } from "lucide-react";
-import { useContest } from "@/context/ContestContext";
-import { CONTEST_ACTIONS } from "@/context/ContestContext";
-import { useToast } from "@/hooks/useToast";
-import { useConfirm } from "@/hooks/useConfirm";
-import { validateName, isDuplicate } from "@/utils/validation";
+import { validateName } from "@/utils/validation";
+import { getCategoryById } from "@/constants/categories";
 import { AgePicker } from "./AgePicker";
 
 const DEFAULT_IBU_IBU_AGE = 18;
 
-export function ParticipantRow({ participant, index }) {
-  const { state, dispatch } = useContest();
-  const toast = useToast();
-  const confirm = useConfirm();
-  const isIbuIbu = state.category === "ibu-ibu";
+/**
+ * Editable row for one participant.
+ * @param {object} props
+ * @param {object} props.participant - { id, name, age }
+ * @param {number} props.index
+ * @param {object} props.contest - { category } (age range is derived from category via CATEGORIES)
+ * @param {Array} props.participants - all participants (for duplicate check on edit)
+ * @param {(id, payload) => Promise<{ok: boolean, error?: string}>} props.onUpdate
+ * @param {(id) => Promise<{ok: boolean, error?: string}>} props.onDelete
+ */
+export function ParticipantRow({
+  participant,
+  index,
+  contest,
+  participants = [],
+  onUpdate,
+  onDelete,
+}) {
+  const isIbuIbu = contest?.category === "ibu-ibu";
+  // Age bounds are derived from the contest's category — single source of truth
+  // (mirrored on the backend in api/_lib/ageRange.js).
+  const categoryMeta = getCategoryById(contest?.category);
+  const ageMin = categoryMeta?.ageMin ?? 0;
+  const ageMax = categoryMeta?.ageMax ?? null;
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(participant.name);
   const [editAge, setEditAge] = useState(
     String(participant.age ?? DEFAULT_IBU_IBU_AGE)
   );
   const [errors, setErrors] = useState({});
+  const [busy, setBusy] = useState(false);
 
   const handleDelete = async () => {
-    const ok = await confirm({
-      title: "Hapus Peserta?",
-      message: `Yakin ingin menghapus "${participant.name}" dari daftar?`,
-      confirmText: "Hapus",
-      cancelText: "Batal",
-      variant: "danger",
-    });
-    if (ok) {
-      dispatch({
-        type: CONTEST_ACTIONS.DELETE_PARTICIPANT,
-        payload: participant.id,
-      });
-      toast.success(`${participant.name} dihapus`);
+    if (!onDelete) return;
+    if (!window.confirm(`Hapus "${participant.name}" dari daftar?`)) return;
+    setBusy(true);
+    try {
+      await onDelete(participant.id);
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const newErrors = {};
 
     const nameResult = validateName(editName);
@@ -57,14 +68,14 @@ export function ParticipantRow({ participant, index }) {
     }
 
     if (!newErrors.name && !newErrors.age) {
-      if (
-        isDuplicate(
-          state.participants,
-          nameResult.value,
-          finalAge,
-          participant.id
-        )
-      ) {
+      const normalized = nameResult.value.trim().toLowerCase();
+      const duplicate = participants.some(
+        (p) =>
+          p.id !== participant.id &&
+          p.name.toLowerCase() === normalized &&
+          Number(p.age) === finalAge
+      );
+      if (duplicate) {
         newErrors.name = "Peserta dengan nama dan umur yang sama sudah ada";
       }
     }
@@ -74,17 +85,21 @@ export function ParticipantRow({ participant, index }) {
       return;
     }
 
-    dispatch({
-      type: CONTEST_ACTIONS.EDIT_PARTICIPANT,
-      payload: {
-        id: participant.id,
+    setBusy(true);
+    try {
+      const result = await onUpdate?.(participant.id, {
         name: nameResult.value,
         age: finalAge,
-      },
-    });
-    toast.success("Data peserta diperbarui");
-    setIsEditing(false);
-    setErrors({});
+      });
+      if (result?.ok) {
+        setIsEditing(false);
+        setErrors({});
+      } else if (result?.error) {
+        setErrors({ name: result.error });
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleCancel = () => {
@@ -111,6 +126,7 @@ export function ParticipantRow({ participant, index }) {
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 maxLength={50}
+                disabled={busy}
                 className={`w-full pl-8 pr-2 py-1.5 text-sm border rounded-md outline-none focus:ring-2 ${
                   errors.name
                     ? "border-rose-400 focus:ring-rose-100"
@@ -130,8 +146,8 @@ export function ParticipantRow({ participant, index }) {
           ) : (
             <div className="space-y-1">
               <AgePicker
-                min={state.ageRange?.min ?? 0}
-                max={state.ageRange?.max ?? 0}
+                min={ageMin}
+                max={ageMax}
                 value={editAge}
                 onChange={(a) => setEditAge(String(a))}
                 error={errors.age}
@@ -144,7 +160,8 @@ export function ParticipantRow({ participant, index }) {
             <button
               type="button"
               onClick={handleSave}
-              className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 transition-colors"
+              disabled={busy}
+              className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-50"
               aria-label="Simpan perubahan"
             >
               <Check className="h-4 w-4" />
@@ -152,7 +169,8 @@ export function ParticipantRow({ participant, index }) {
             <button
               type="button"
               onClick={handleCancel}
-              className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 transition-colors"
+              disabled={busy}
+              className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-50"
               aria-label="Batal edit"
             >
               <X className="h-4 w-4" />
@@ -179,7 +197,8 @@ export function ParticipantRow({ participant, index }) {
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-brand-600 transition-colors"
+            disabled={busy}
+            className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-brand-600 transition-colors disabled:opacity-50"
             aria-label={`Edit ${participant.name}`}
           >
             <Pencil className="h-4 w-4" />
@@ -187,7 +206,8 @@ export function ParticipantRow({ participant, index }) {
           <button
             type="button"
             onClick={handleDelete}
-            className="p-1.5 rounded-md text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            disabled={busy}
+            className="p-1.5 rounded-md text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50"
             aria-label={`Hapus ${participant.name}`}
           >
             <Trash2 className="h-4 w-4" />

@@ -1,40 +1,19 @@
-import { Link } from "react-router-dom";
-import { RotateCcw } from "lucide-react";
-import { useContest } from "@/context/ContestContext";
-import { useConfirm } from "@/hooks/useConfirm";
-import { CONTEST_ACTIONS } from "@/context/ContestContext";
+import { Link, useNavigate } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
-import { storage } from "@/utils/storage";
-import { useNavigate } from "react-router-dom";
 import logoIpeka from "@/assets/logo.png";
+import { ROUTES } from "@/constants/routes";
 
 export function Header() {
-  const { state, dispatch } = useContest();
-  const confirm = useConfirm();
+  const { isAuthed, isLoading, admin } = useAuth();
   const navigate = useNavigate();
-  const hasData = !!state.contestName;
-
-  const handleReset = async () => {
-    const ok = await confirm({
-      title: "Reset Semua Data?",
-      message:
-        "Nama lomba, kategori, dan semua peserta akan dihapus. Tindakan ini tidak bisa dibatalkan.",
-      confirmText: "Ya, Reset",
-      cancelText: "Batal",
-      variant: "danger",
-    });
-    if (ok) {
-      dispatch({ type: CONTEST_ACTIONS.RESET });
-      storage.clear();
-      navigate("/");
-    }
-  };
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link
-          to="/"
+          to={ROUTES.HOME}
           className="flex items-center gap-2.5 text-slate-900 hover:text-slate-700 transition-colors"
         >
           <img
@@ -52,17 +31,31 @@ export function Header() {
           </div>
         </Link>
 
-        {hasData ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleReset}
-            icon={<RotateCcw className="h-4 w-4" />}
-            aria-label="Reset semua data"
-          >
-            <span className="hidden sm:inline">Reset</span>
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {!isLoading ? (
+            isAuthed ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(ROUTES.ADMIN_DASHBOARD)}
+                icon={<ShieldCheck className="h-4 w-4" />}
+                aria-label={admin ? `Admin (${admin.username})` : "Admin"}
+              >
+                <span className="hidden sm:inline">Admin</span>
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(ROUTES.ADMIN_LOGIN)}
+                icon={<ShieldCheck className="h-4 w-4" />}
+                aria-label="Login admin"
+              >
+                <span className="hidden sm:inline">Login Admin</span>
+              </Button>
+            )
+          ) : null}
+        </div>
       </div>
     </header>
   );

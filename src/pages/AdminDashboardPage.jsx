@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Users,
   Calendar,
+  ArrowRight,
+  Eye,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -215,12 +217,25 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-400">
+      <div className="mt-5">
         <Link
           to={ROUTES.HOME}
-          className="hover:text-slate-600 underline-offset-2 hover:underline"
+          className="group flex items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 bg-white hover:border-brand-300 hover:bg-brand-50/40 transition-colors"
         >
-          Lihat tampilan publik
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0 group-hover:bg-brand-100 transition-colors">
+              <Eye className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900">
+                Lihat Tampilan Publik
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Buka halaman publik
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all shrink-0" />
         </Link>
       </div>
     </div>

@@ -1,16 +1,3 @@
-// =====================================================
-// GET  /api/contests  — list all (public, for dashboard)
-// POST /api/contests  — create contest (admin only)
-// =====================================================
-//
-// NOTE: age_min/age_max are no longer part of the contest entity.
-// The age range is derived from `category` via api/_lib/ageRange.js.
-//
-// POST behavior: when creating a contest that shares the same category (and
-// sub_category for `anak`) with an earlier contest that already has
-// participants, the system auto-copies those participants into the new
-// contest. The response includes `copied_from` describing the source.
-// =====================================================
 
 import { getSql } from "../_lib/db.js";
 import { requireAdmin } from "../_lib/middleware.js";
@@ -86,14 +73,6 @@ async function handleCreate(request) {
   try {
     const sql = getSql();
 
-    // Single-statement atomic create + optional copy.
-    // - new_contest: insert the new contest and return it
-    // - prev:        most recent earlier contest with matching
-    //                category + sub_category (null-safe via
-    //                IS NOT DISTINCT FROM) that has participants
-    // - copied:      copy those participants into the new contest
-    // - final SELECT returns the new contest + source info, or
-    //   source=null when nothing qualified
     const rows = await sql`
       WITH new_contest AS (
         INSERT INTO contests (name, category, sub_category)

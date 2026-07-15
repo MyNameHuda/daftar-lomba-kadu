@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { Save, AlertCircle, ArrowLeft, Pencil, Plus, Copy } from "lucide-react";
+import { Save, AlertCircle, ArrowLeft, Pencil, Plus, Copy, Eye } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { PublicPreviewModal } from "@/components/contest/PublicPreviewModal";
 import {
   CATEGORIES,
   getCategoryById,
@@ -323,7 +324,9 @@ function ReadOnlySummary({ id, onEdit }) {
   const toast = useToast();
   const navigate = useNavigate();
   const [contest, setContest] = useState(null);
+  const [participants, setParticipants] = useState([]);
   const [status, setStatus] = useState("loading");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -332,6 +335,7 @@ function ReadOnlySummary({ id, onEdit }) {
       .getContest(id, controller.signal)
       .then((res) => {
         setContest(res?.contest ?? null);
+        setParticipants(res?.participants ?? []);
         setStatus("ok");
       })
       .catch((err) => {
@@ -416,16 +420,26 @@ function ReadOnlySummary({ id, onEdit }) {
         </dl>
       </Card>
 
-      <div className="mt-4 flex justify-end gap-2">
+      <div className="mt-4 space-y-2">
         <Button
           fullWidth
           size="lg"
-          onClick={() => navigate(`/lomba/${id}`)}
-          variant="secondary"
+          onClick={() => setPreviewOpen(true)}
+          icon={<Eye className="h-4 w-4" />}
         >
           Lihat Tampilan Publik
         </Button>
+        <p className="text-xs text-slate-400 text-center">
+          Pratinjau tampilan lomba yang dilihat pengunjung umum
+        </p>
       </div>
+
+      <PublicPreviewModal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        contest={contest}
+        participants={participants}
+      />
     </div>
   );
 }

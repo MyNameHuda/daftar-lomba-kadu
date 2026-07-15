@@ -6,27 +6,39 @@
 // - Vercel Edge Functions
 // - Local Node.js scripts
 // =====================================================
+//
+// We cache the `neon()` SQL tag at module scope so the underlying HTTP/2
+// connection is reused for every query in the same Node.js process.
+// Without this, every `getSql()` call would create a fresh connection —
+// slow + can hit Vercel's 10s function timeout on Neon cold start.
+// =====================================================
 
 import { neon, neonConfig, Pool } from "@neondatabase/serverless";
 
+// Reuse HTTP/2 connections across queries. Safe in both dev and prod.
+neonConfig.fetchConnectionCache = true;
+
+let cachedSql = null;
 let cachedPool = null;
 
-/**
- * Get raw SQL executor (for one-shot queries)
- * Usage: const sql = getSql(); const rows = await sql`SELECT 1`;
- */
-export function getSql() {
+function getUrl() {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error("DATABASE_URL is not set");
   }
+  return url;
+}
 
-  // Cache connections in production for performance
-  if (process.env.NODE_ENV === "production") {
-    neonConfig.fetchConnectionCache = true;
+/**
+ * Get raw SQL executor (for one-shot queries).
+ * The function is created once and reused for the lifetime of the process.
+ * Usage: const sql = getSql(); const rows = await sql`SELECT 1`;
+ */
+export function getSql() {
+  if (!cachedSql) {
+    cachedSql = neon(getUrl());
   }
-
-  return neon(url);
+  return cachedSql;
 }
 
 /**
@@ -37,13 +49,8 @@ export function getSql() {
  *   try { await client.query(...); } finally { client.release(); }
  */
 export function getPool() {
-  if (cachedPool) return cachedPool;
-
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL is not set");
+  if (!cachedPool) {
+    cachedPool = new Pool({ connectionString: getUrl() });
   }
-
-  cachedPool = new Pool({ connectionString: url });
   return cachedPool;
 }

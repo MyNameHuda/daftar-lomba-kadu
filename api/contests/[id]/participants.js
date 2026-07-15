@@ -26,8 +26,15 @@ export const config = { runtime: "nodejs" };
 export const fetch = async function handler(request, context) {
   if (request.method === "OPTIONS") return handleCors(request);
 
-  const { id } = context.params || {};
-  const contestId = Number(id);
+  let rawId = context?.params?.id;
+  if (!rawId) {
+    try {
+      const pathname = new URL(request.url).pathname;
+      const m = pathname.match(/\/api\/contests\/([^/]+)/);
+      if (m) rawId = m[1];
+    } catch {}
+  }
+  const contestId = Number(rawId);
   if (!Number.isInteger(contestId) || contestId <= 0) {
     return badRequest("ID lomba tidak valid", request);
   }

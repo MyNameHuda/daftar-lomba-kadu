@@ -23,8 +23,21 @@ export const config = { runtime: "nodejs" };
 export const fetch = async function handler(request, context) {
   if (request.method === "OPTIONS") return handleCors(request);
 
-  const { id } = context.params || {};
-  const contestId = Number(id);
+  // Debug: log what Vercel actually sends us
+  console.log("[contests/[id]] url=", request.url, "context.params=", context?.params, "context keys=", context ? Object.keys(context) : "no context");
+
+  // Vercel should give us context.params.id, but in Node.js Web Fetch runtime
+  // it's not always populated. Fall back to parsing the URL path.
+  let rawId = context?.params?.id;
+  if (!rawId) {
+    try {
+      const pathname = new URL(request.url).pathname;
+      const m = pathname.match(/\/api\/contests\/([^/]+)/);
+      if (m) rawId = m[1];
+    } catch {}
+  }
+  const contestId = Number(rawId);
+  console.log("[contests/[id]] rawId=", rawId, "contestId=", contestId);
   if (!Number.isInteger(contestId) || contestId <= 0) {
     return badRequest("ID lomba tidak valid", request);
   }

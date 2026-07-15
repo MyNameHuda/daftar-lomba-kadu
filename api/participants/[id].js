@@ -19,8 +19,15 @@ export const config = { runtime: "nodejs" };
 export const fetch = async function handler(request, context) {
   if (request.method === "OPTIONS") return handleCors(request);
 
-  const { id } = context.params || {};
-  const participantId = Number(id);
+  let rawId = context?.params?.id;
+  if (!rawId) {
+    try {
+      const pathname = new URL(request.url).pathname;
+      const m = pathname.match(/\/api\/participants\/([^/]+)/);
+      if (m) rawId = m[1];
+    } catch {}
+  }
+  const participantId = Number(rawId);
   if (!Number.isInteger(participantId) || participantId <= 0) {
     return badRequest("ID peserta tidak valid", request);
   }
